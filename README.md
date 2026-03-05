@@ -4,19 +4,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green)](https://modelcontextprotocol.io)
 
-**MCP server for [rftools.io](https://rftools.io) — 197 RF & electronics calculators for AI agents.**
+**MCP server for [rftools.io](https://rftools.io) — 197 RF & electronics calculators + 13 server-side simulation tools for AI agents.**
 
-Give Claude, Cursor, or any MCP-compatible AI assistant access to validated engineering calculators. Microstrip impedance, link budgets, filter design, converter sizing, antenna patterns, and 190+ more — all callable as MCP tools.
+Give Claude, Cursor, or any MCP-compatible AI assistant access to validated engineering calculators and heavy server-side simulations. Microstrip impedance, link budgets, filter design, converter sizing, antenna patterns, and 190+ more calculators — plus NEC2 antenna simulation, FDTD, Monte Carlo, SMPS analysis, EMI estimation, and more, all callable as MCP tools.
 
 ## Quick Start
 
-```bash
-npx rftools-mcp
-```
-
-That's it. The server starts on stdio and is ready for connections.
+Calculators work with no API key. For simulation tools, sign up at [rftools.io](https://rftools.io) and generate an API key from your dashboard.
 
 ## Setup
+
+### Without API key — calculators only
+
+All 197 calculators run locally with no sign-up required.
+
+### With API key — calculators + simulation tools
+
+Sign up at [rftools.io](https://rftools.io) and generate an API key from your [dashboard](https://rftools.io/dashboard). Free accounts include 5 simulation runs/month. Pro: 100/month. API tier: 10,000/month.
 
 ### Claude Desktop
 
@@ -27,18 +31,27 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "rftools": {
       "command": "npx",
-      "args": ["-y", "rftools-mcp"]
+      "args": ["-y", "rftools-mcp"],
+      "env": {
+        "RFTOOLS_API_KEY": "rfc_your_key_here"
+      }
     }
   }
 }
 ```
 
-Restart Claude Desktop. You now have 197 calculators available.
+Omit the `env` block to use calculators only. Restart Claude Desktop after saving.
 
 ### Claude Code
 
 ```bash
 claude mcp add rftools-mcp -- npx -y rftools-mcp
+```
+
+To add your API key:
+
+```bash
+claude mcp add rftools-mcp -e RFTOOLS_API_KEY=rfc_your_key_here -- npx -y rftools-mcp
 ```
 
 ### Cursor
@@ -50,7 +63,10 @@ Add to `.cursor/mcp.json` in your project:
   "mcpServers": {
     "rftools": {
       "command": "npx",
-      "args": ["-y", "rftools-mcp"]
+      "args": ["-y", "rftools-mcp"],
+      "env": {
+        "RFTOOLS_API_KEY": "rfc_your_key_here"
+      }
     }
   }
 }
@@ -65,7 +81,10 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
   "mcpServers": {
     "rftools": {
       "command": "npx",
-      "args": ["-y", "rftools-mcp"]
+      "args": ["-y", "rftools-mcp"],
+      "env": {
+        "RFTOOLS_API_KEY": "rfc_your_key_here"
+      }
     }
   }
 }
@@ -73,7 +92,9 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ## Tools
 
-### `list_calculators`
+### Calculator tools — no API key required
+
+#### `list_calculators`
 
 List available calculators, optionally filtered by category.
 
@@ -86,7 +107,7 @@ List available calculators, optionally filtered by category.
 **Parameters:**
 - `category` (optional): `rf`, `pcb`, `power`, `signal`, `antenna`, `general`, `motor`, `protocol`, `emc`, `thermal`, `sensor`, `unit-conversion`, `audio`
 
-### `get_calculator_info`
+#### `get_calculator_info`
 
 Get detailed info about a calculator — inputs with units/defaults, outputs, and the formula used.
 
@@ -98,9 +119,9 @@ Get detailed info about a calculator — inputs with units/defaults, outputs, an
 **Parameters:**
 - `slug` (required): Calculator identifier (e.g. `"microstrip-impedance"`)
 
-### `run_calculation`
+#### `run_calculation`
 
-Run a calculator with specific inputs. Returns results with units and a link to the interactive version on rftools.io.
+Run a calculator with specific inputs. Returns results with units and a link to the interactive version on rftools.io. Runs locally — instant, no quota consumed.
 
 ```
 "Calculate microstrip impedance for a 0.3mm trace on 0.2mm Rogers RO4003C"
@@ -111,6 +132,57 @@ Run a calculator with specific inputs. Returns results with units and a link to 
 **Parameters:**
 - `slug` (required): Calculator identifier
 - `inputs` (required): Object with input values, e.g. `{"traceWidth": 0.3, "substrateHeight": 0.2}`
+
+---
+
+### Simulation tools — API key required
+
+Server-side jobs that are too heavy for in-browser computation. Jobs run on shared compute (free tier) or a priority queue (Pro/API tier). Simulations typically complete in 15–120 seconds; queue wait may add additional time.
+
+**Quota:** Free: 5 runs/month · Pro: 100/month · API tier: 10,000/month
+
+#### `list_simulation_tools`
+
+List all 13 available simulation tools with their `jobType` identifiers and parameter reference.
+
+```
+"What simulation tools are available?"
+"Show me the RF simulation tools"
+```
+
+#### `run_simulation`
+
+Submit a simulation job and wait for the result. Returns the full result JSON along with a link to the interactive results page on rftools.io.
+
+```
+"Synthesize a broadband matching network from 50Ω to 200Ω between 800–1200 MHz"
+"Run a Monte Carlo tolerance analysis on a 2nd-order Butterworth low-pass filter at 1 GHz"
+"Simulate a 3-element Yagi antenna at 144 MHz"
+"Estimate radiated emissions from a 10cm trace carrying 50mA at 100 MHz"
+"Run SMPS control loop stability analysis on my buck converter"
+```
+
+**Parameters:**
+- `jobType` (required): Job type identifier — use `list_simulation_tools` to see all valid values
+- `params` (required): Simulation parameters — use `list_simulation_tools` to see required params per job type
+
+**Available simulation tools:**
+
+| Tool | `jobType` |
+|------|-----------|
+| Broadband Impedance Matching Synthesizer | `impedance_match` |
+| RF Filter Monte Carlo Tolerance Analysis | `filter_monte_carlo` |
+| Eye Diagram Generator | `eye_diagram` |
+| NEC2 Wire Antenna Simulator | `antenna_sim` |
+| S-Parameter Analysis Pipeline | `sparam_pipeline` |
+| FDTD S-Parameter Simulator | `fdtd_sparam` |
+| SMPS Control Loop Stability Analyzer | `smps_control_loop` |
+| EMI Radiated Emissions Estimator | `emi_radiated` |
+| Magnetics Optimizer (NSGA-II) | `magnetics_optimizer` |
+| Radar Detection Probability Calculator | `radar_detection` |
+| PDN Impedance Analyzer | `pdn_impedance` |
+| Satellite Link Budget (ITU-R) | `sat_link_budget` |
+| RF Cascade Budget with Monte Carlo | `rf_cascade` |
 
 ## Example Conversations
 
@@ -163,10 +235,18 @@ This MCP server calls the **exact same validated calculator code** that runs on 
 
 ## How It Works
 
-The server bundles all 197 calculator functions from rftools.io into a single file. Each calculator is a pure TypeScript function — no API calls, no network latency, no rate limits. The AI calls the function directly and gets instant, accurate results.
+**Calculators** are bundled as pure TypeScript functions — no API calls, no network latency, no rate limits. The AI calls the function directly and gets instant results.
 
 ```
 AI Agent ←stdio→ rftools-mcp ←direct call→ calculator function
+```
+
+**Simulation tools** run server-side on rftools.io infrastructure (AWS Lambda + SQS + Fargate). The MCP server submits the job and polls until the result is ready, then returns the full result JSON inline.
+
+```
+AI Agent ←stdio→ rftools-mcp ←HTTPS + API key→ rftools.io API → SQS → worker
+                                ←poll /jobs/{id}←
+                                ←result JSON←
 ```
 
 ## Machine-Readable Documentation
