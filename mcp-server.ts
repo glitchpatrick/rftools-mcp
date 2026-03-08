@@ -338,7 +338,7 @@ server.registerTool(
   {
     title: 'List Simulation Tools',
     description:
-      'List the 13 server-side RF simulation tools available via API key. ' +
+      'List the 14 server-side RF simulation tools available via API key. ' +
       'These require RFTOOLS_API_KEY (set in env). Free tier: 5 runs/month. Pro: 100/month. API tier: 10 000/month.',
     inputSchema: z.object({}),
   },
