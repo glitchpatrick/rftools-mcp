@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-#!/usr/bin/env node
+#\!/usr/bin/env node
+"use strict";
 
 // ../rftools-mcp/mcp-server.ts
 var import_mcp = require("@modelcontextprotocol/sdk/server/mcp.js");
@@ -259,7 +260,7 @@ var rfLinkBudget = {
       thresholds: {
         good: { min: 10 },
         warning: { min: 3 },
-        danger: { max: 0 }
+        danger: { min: 0 }
       }
     },
     {
@@ -1369,15 +1370,15 @@ var coaxImpedance = {
   verificationData: [
     {
       inputs: { innerDiameter: 0.9, outerDiameter: 2.95, dielectricConstant: 2.3 },
-      expectedOutputs: { impedance: 50 },
-      tolerance: 0.05,
-      source: "RG-58 nominal 50\u03A9"
+      expectedOutputs: { impedance: 46.97 },
+      tolerance: 0.01,
+      source: "Z\u2080 = (60/\u221A2.3)\xB7ln(2.95/0.9) = 46.97\u03A9"
     },
     {
       inputs: { innerDiameter: 1, outerDiameter: 3.73, dielectricConstant: 1 },
-      expectedOutputs: { impedance: 75 },
-      tolerance: 0.03,
-      source: "60*ln(3.73) \u2248 75\u03A9 air-dielectric coax"
+      expectedOutputs: { impedance: 78.98 },
+      tolerance: 0.01,
+      source: "60\xB7ln(3.73) = 78.98\u03A9 air-dielectric coax"
     }
   ]
 };
@@ -1472,7 +1473,7 @@ var coaxLoss = {
       thresholds: {
         good: { max: 3 },
         warning: { min: 3, max: 10 },
-        danger: { min: 10 }
+        danger: { max: 10 }
       }
     },
     {
@@ -1504,7 +1505,10 @@ var coaxLoss = {
     ],
     reference: "Times Microwave LMR cable datasheets; Belden cable catalog"
   },
-  relatedCalculators: ["coax-impedance", "rf-link-budget", "vswr-return-loss", "link-margin"]
+  relatedCalculators: ["coax-impedance", "rf-link-budget", "vswr-return-loss", "link-margin"],
+  liveWidgets: [
+    { type: "space-weather", position: "above-outputs" }
+  ]
 };
 
 // src/lib/calculators/rf/ism-coexistence.ts
@@ -1612,7 +1616,11 @@ var ismCoexistence = {
       { symbol: "F_shared", description: "Fraction of shared channel bandwidth", unit: "" }
     ]
   },
-  relatedCalculators: ["rf-link-budget", "noise-figure-cascade", "free-space-path-loss"]
+  relatedCalculators: ["rf-link-budget", "noise-figure-cascade", "free-space-path-loss"],
+  liveWidgets: [
+    { type: "ism-coexistence", position: "above-outputs", props: { bandMhz: 2400 } },
+    { type: "space-weather", position: "below-outputs" }
+  ]
 };
 
 // src/lib/calculators/rf/attenuator-designer.ts
@@ -1954,7 +1962,7 @@ var smithChart = {
       thresholds: {
         good: { max: 0.1 },
         warning: { max: 0.33 },
-        danger: { min: 0.33 }
+        danger: { max: 0.33 }
       }
     },
     {
@@ -1973,7 +1981,7 @@ var smithChart = {
       thresholds: {
         good: { max: 1.5 },
         warning: { max: 3 },
-        danger: { min: 3 }
+        danger: { max: 3 }
       }
     },
     {
@@ -1985,7 +1993,7 @@ var smithChart = {
       thresholds: {
         good: { min: 20 },
         warning: { min: 10 },
-        danger: { max: 10 }
+        danger: { min: 10 }
       }
     },
     {
@@ -2245,15 +2253,15 @@ var traceWidthCurrent = {
   verificationData: [
     {
       inputs: { current: 1, copperWeight: 1, tempRise: 10, traceLength: 100, isExternal: 1 },
-      expectedOutputs: { width2221mm: 0.25 },
-      tolerance: 0.05,
-      source: "IPC-2221 standard table"
+      expectedOutputs: { width2221mm: 0.302 },
+      tolerance: 0.02,
+      source: "IPC-2221B formula: A=(I/(k\xB7\u0394T^b))^(1/c), k=0.048 b=0.44 c=0.725"
     },
     {
       inputs: { current: 5, copperWeight: 1, tempRise: 10, traceLength: 100, isExternal: 1 },
-      expectedOutputs: { width2221mm: 2.5 },
-      tolerance: 0.1,
-      source: "IPC-2221 standard table"
+      expectedOutputs: { width2221mm: 2.782 },
+      tolerance: 0.02,
+      source: "IPC-2221B formula: A=(I/(k\xB7\u0394T^b))^(1/c), k=0.048 b=0.44 c=0.725"
     }
   ]
 };
@@ -2565,9 +2573,9 @@ var differentialPair = {
         dielectricConstant: 4.2,
         copperThickness: 17.5
       },
-      expectedOutputs: { zdiff: 90 },
-      tolerance: 0.15,
-      source: "Typical USB 3.0 stack (IPC-2141A, approximate)"
+      expectedOutputs: { zdiff: 55 },
+      tolerance: 0.02,
+      source: "IPC-2141A: tight coupling (S=W) on 0.1mm FR4, Zdiff \u2248 2\xD7Z_odd = 55\u03A9"
     }
   ]
 };
@@ -3358,7 +3366,6 @@ function calculateBuckConverter(inputs) {
   const Cin_min = iout * D * (1 - D) / (fsw_Hz * deltaVout_V);
   const cinUF = Cin_min * 1e6;
   const ilPeak = iout + deltaIL_A / 2;
-  const efficiency = vout * iout / (vin * iout) * 100;
   const dutyCycle = D * 100;
   return {
     values: {
@@ -3366,8 +3373,7 @@ function calculateBuckConverter(inputs) {
       inductorUH,
       coutUF,
       cinUF,
-      ilPeak,
-      efficiency
+      ilPeak
     }
   };
 }
@@ -3376,7 +3382,7 @@ var buckConverter = {
   title: "Buck Converter Design Calculator",
   shortTitle: "Buck Converter",
   category: "power",
-  description: "Design a synchronous buck (step-down) converter: calculate duty cycle, inductor value, output capacitor, input capacitor, and theoretical efficiency.",
+  description: "Design a synchronous buck (step-down) converter: calculate duty cycle, inductor value, output capacitor, and input capacitor.",
   keywords: ["buck converter calculator", "step down converter", "dc dc converter design", "inductor value buck", "duty cycle calculator", "switching regulator design"],
   inputs: [
     {
@@ -3455,7 +3461,7 @@ var buckConverter = {
       precision: 2,
       thresholds: {
         good: { min: 5, max: 90 },
-        danger: { max: 5 }
+        danger: { min: 5 }
       }
     },
     {
@@ -3485,13 +3491,6 @@ var buckConverter = {
       symbol: "IL_peak",
       unit: "A",
       precision: 3
-    },
-    {
-      key: "efficiency",
-      label: "Theoretical Efficiency",
-      symbol: "\u03B7",
-      unit: "%",
-      precision: 1
     }
   ],
   calculate: calculateBuckConverter,
@@ -3631,7 +3630,7 @@ var ldoThermal = {
       thresholds: {
         good: { max: 0.5 },
         warning: { max: 1 },
-        danger: { min: 2 }
+        danger: { max: 2 }
       }
     },
     {
@@ -3643,7 +3642,7 @@ var ldoThermal = {
       thresholds: {
         good: { max: 100 },
         warning: { max: 115 },
-        danger: { min: 125 }
+        danger: { max: 125 }
       }
     },
     {
@@ -3655,7 +3654,7 @@ var ldoThermal = {
       thresholds: {
         good: { min: 25 },
         warning: { min: 10 },
-        danger: { max: 0 }
+        danger: { min: 0 }
       }
     },
     {
@@ -3826,7 +3825,7 @@ var batteryLife = {
       thresholds: {
         good: { min: 7 },
         warning: { min: 1, max: 7 },
-        danger: { max: 1 }
+        danger: { min: 1 }
       }
     },
     {
@@ -6246,7 +6245,7 @@ var uartBaudRate = {
       thresholds: {
         good: { max: 0.5 },
         warning: { max: 2 },
-        danger: { min: 2 }
+        danger: { max: 2 }
       }
     }
   ],
@@ -6564,7 +6563,7 @@ var clockJitter = {
       unit: "ps",
       precision: 1,
       primary: true,
-      thresholds: { good: { min: 100 }, warning: { min: 0, max: 100 }, danger: { max: 0 } }
+      thresholds: { good: { min: 100 }, warning: { min: 0, max: 100 }, danger: { min: 0 } }
     },
     { key: "totalJitter_ps", label: "Total Jitter", unit: "ps", precision: 1 },
     {
@@ -6575,7 +6574,8 @@ var clockJitter = {
       thresholds: { good: { max: 60 }, warning: { min: 60, max: 80 }, danger: { min: 80 } }
     },
     { key: "availableBudget_ps", label: "Available Budget", unit: "ps", precision: 1 },
-    { key: "periodPs", label: "Clock Period", unit: "ps", precision: 1 }
+    { key: "periodPs", label: "Clock Period", unit: "ps", precision: 1 },
+    { key: "bufferTotalJitter_ps", label: "Buffer Total Jitter", unit: "ps", precision: 1 }
   ],
   calculate: calculateClockJitter,
   formula: {
@@ -6683,7 +6683,7 @@ var heatsinkCalculator = {
       thresholds: {
         good: { min: 2 },
         warning: { min: 0, max: 5 },
-        danger: { max: 0 }
+        danger: { min: 0 }
       }
     },
     {
@@ -6695,7 +6695,7 @@ var heatsinkCalculator = {
       thresholds: {
         good: { max: 100 },
         warning: { max: 125 },
-        danger: { min: 125 }
+        danger: { max: 125 }
       }
     },
     {
@@ -6824,7 +6824,7 @@ var pcbTraceTemp = {
       thresholds: {
         good: { max: 10 },
         warning: { max: 30 },
-        danger: { min: 30 }
+        danger: { max: 30 }
       }
     },
     {
@@ -6836,7 +6836,7 @@ var pcbTraceTemp = {
       thresholds: {
         good: { max: 55 },
         warning: { max: 85 },
-        danger: { min: 85 }
+        danger: { max: 85 }
       }
     },
     {
@@ -7241,7 +7241,7 @@ var shieldingEffectiveness = {
       thresholds: {
         good: { min: 20 },
         warning: { min: 6 },
-        danger: { max: 6 }
+        danger: { min: 6 }
       }
     },
     {
@@ -7260,7 +7260,7 @@ var shieldingEffectiveness = {
       thresholds: {
         good: { min: 40 },
         warning: { min: 20 },
-        danger: { max: 20 }
+        danger: { min: 20 }
       }
     },
     {
@@ -7741,7 +7741,7 @@ var qFactor = {
       thresholds: {
         good: { min: 50 },
         warning: { min: 10 },
-        danger: { max: 10 }
+        danger: { min: 10 }
       }
     },
     {
@@ -8349,7 +8349,7 @@ var boostConverter = {
       precision: 2,
       thresholds: {
         good: { min: 10, max: 90 },
-        danger: { min: 95 }
+        danger: { max: 95 }
       }
     },
     {
@@ -8735,13 +8735,6 @@ var snrCalculator = {
   ],
   outputs: [
     {
-      key: "noiseFloor",
-      label: "Noise Floor",
-      symbol: "N_floor",
-      unit: "dBm",
-      precision: 2
-    },
-    {
       key: "snr",
       label: "Signal-to-Noise Ratio",
       symbol: "SNR",
@@ -8750,8 +8743,15 @@ var snrCalculator = {
       thresholds: {
         good: { min: 20 },
         warning: { min: 10 },
-        danger: { max: 10 }
+        danger: { min: 10 }
       }
+    },
+    {
+      key: "noiseFloor",
+      label: "Noise Floor",
+      symbol: "N_floor",
+      unit: "dBm",
+      precision: 2
     },
     {
       key: "sensitivity",
@@ -9167,7 +9167,7 @@ var freeSpacePathLoss = {
       thresholds: {
         good: { max: 80 },
         warning: { min: 80, max: 120 },
-        danger: { min: 120 }
+        danger: { max: 120 }
       }
     },
     {
@@ -9447,7 +9447,7 @@ var powerAmplifierEfficiency = {
       thresholds: {
         good: { min: 40 },
         warning: { min: 20, max: 40 },
-        danger: { max: 20 }
+        danger: { min: 20 }
       }
     },
     {
@@ -9459,7 +9459,7 @@ var powerAmplifierEfficiency = {
       thresholds: {
         good: { min: 50 },
         warning: { min: 25, max: 50 },
-        danger: { max: 25 }
+        danger: { min: 25 }
       }
     },
     {
@@ -9490,12 +9490,12 @@ function calculateIntermodulationDistortion(inputs) {
   const { outputPower, inputPower, oip3, oip2, freq1, freq2 } = inputs;
   const gain = outputPower - inputPower;
   const iip3 = oip3 - gain;
-  const im3Power = 3 * inputPower - 2 * iip3;
+  const im3Power = 3 * outputPower - 2 * oip3;
   const im3Ratio = im3Power - outputPower;
   const noiseFloor = -164;
   const dynamicRange = 2 / 3 * (iip3 - noiseFloor);
   const iip2 = oip2 - gain;
-  const im2Power = 2 * inputPower - iip2;
+  const im2Power = 2 * outputPower - oip2;
   const im2Ratio = im2Power - outputPower;
   const im3Low = Math.abs(2 * freq1 - freq2);
   const im3High = 2 * freq2 - freq1;
@@ -9621,7 +9621,7 @@ var intermodulationDistortion = {
       thresholds: {
         good: { max: -40 },
         warning: { min: -40, max: -20 },
-        danger: { min: -20 }
+        danger: { max: -20 }
       }
     },
     {
@@ -9654,7 +9654,7 @@ var intermodulationDistortion = {
       thresholds: {
         good: { max: -60 },
         warning: { min: -60, max: -30 },
-        danger: { min: -30 }
+        danger: { max: -30 }
       }
     },
     {
@@ -9695,7 +9695,7 @@ var intermodulationDistortion = {
   ],
   calculate: calculateIntermodulationDistortion,
   formula: {
-    primary: "IIP3 = OIP3 \u2212 G;  PIM3 = 3\xB7Pin \u2212 2\xB7IIP3;  PIM2 = 2\xB7Pin \u2212 IIP2",
+    primary: "IIP3 = OIP3 \u2212 G;  P_IM3 = 3\xB7Pout \u2212 2\xB7OIP3;  P_IM2 = 2\xB7Pout \u2212 OIP2",
     variables: [
       { symbol: "IIP3", description: "Input third-order intercept point", unit: "dBm" },
       { symbol: "OIP3", description: "Output third-order intercept point", unit: "dBm" },
@@ -10081,7 +10081,7 @@ var vibrationPhaseNoise = {
       thresholds: {
         good: { max: -100 },
         warning: { min: -100, max: -60 },
-        danger: { min: -60 }
+        danger: { max: -60 }
       }
     },
     {
@@ -10107,7 +10107,7 @@ var vibrationPhaseNoise = {
       thresholds: {
         good: { max: 0 },
         warning: { min: 0, max: 20 },
-        danger: { min: 20 }
+        danger: { max: 20 }
       }
     }
   ],
@@ -10296,6 +10296,9 @@ var returnLossError = {
   },
   visualization: { type: "none" },
   relatedCalculators: ["vswr-return-loss", "noise-figure-cascade", "rf-link-budget"],
+  liveWidgets: [
+    { type: "space-weather", position: "above-outputs" }
+  ],
   verificationData: [
     {
       inputs: { dutReturnLoss: 20, directivity: 35, sourceMatch: 30 },
@@ -10415,7 +10418,7 @@ var adcSnr = {
       thresholds: {
         good: { min: 60 },
         warning: { min: 40, max: 60 },
-        danger: { max: 40 }
+        danger: { min: 40 }
       }
     },
     {
@@ -12603,7 +12606,7 @@ var mosfetPowerDissipation = {
       thresholds: {
         good: { max: 500 },
         warning: { max: 2e3 },
-        danger: { min: 2e3 }
+        danger: { max: 2e3 }
       }
     },
     {
@@ -12615,7 +12618,7 @@ var mosfetPowerDissipation = {
       thresholds: {
         good: { max: 100 },
         warning: { max: 125 },
-        danger: { min: 125 }
+        danger: { max: 125 }
       }
     },
     {
@@ -12627,7 +12630,7 @@ var mosfetPowerDissipation = {
       thresholds: {
         good: { min: 95 },
         warning: { min: 85 },
-        danger: { max: 85 }
+        danger: { min: 85 }
       }
     }
   ],
@@ -12897,11 +12900,11 @@ var batteryChargeTime = {
   ],
   outputs: [
     {
-      key: "chargeCurrent",
-      label: "Charge Current",
-      symbol: "I_chg",
-      unit: "mA",
-      precision: 1
+      key: "chargeTime",
+      label: "Total Charge Time",
+      symbol: "t_total",
+      unit: "hr",
+      precision: 2
     },
     {
       key: "ccTime",
@@ -12911,11 +12914,11 @@ var batteryChargeTime = {
       precision: 2
     },
     {
-      key: "chargeTime",
-      label: "Total Charge Time",
-      symbol: "t_total",
-      unit: "hr",
-      precision: 2
+      key: "chargeCurrent",
+      label: "Charge Current",
+      symbol: "I_chg",
+      unit: "mA",
+      precision: 1
     },
     {
       key: "energyIn",
@@ -12933,7 +12936,7 @@ var batteryChargeTime = {
       thresholds: {
         good: { min: 90 },
         warning: { min: 80 },
-        danger: { max: 80 }
+        danger: { min: 80 }
       }
     }
   ],
@@ -13042,7 +13045,7 @@ var inrushCurrentLimiter = {
       thresholds: {
         good: { max: 5 },
         warning: { max: 20 },
-        danger: { min: 20 }
+        danger: { max: 20 }
       }
     },
     {
@@ -13198,7 +13201,7 @@ var chargePumpVoltage = {
       thresholds: {
         good: { max: 50 },
         warning: { max: 200 },
-        danger: { min: 200 }
+        danger: { max: 200 }
       }
     },
     {
@@ -13210,7 +13213,7 @@ var chargePumpVoltage = {
       thresholds: {
         good: { min: 80 },
         warning: { min: 60 },
-        danger: { max: 60 }
+        danger: { min: 60 }
       }
     }
   ],
@@ -13359,7 +13362,7 @@ var switchingRegulatorRipple = {
       thresholds: {
         good: { max: 10 },
         warning: { max: 50 },
-        danger: { min: 50 }
+        danger: { max: 50 }
       }
     }
   ],
@@ -13467,7 +13470,7 @@ var linearRegulatorDropout = {
       thresholds: {
         good: { max: 250 },
         warning: { max: 750 },
-        danger: { min: 750 }
+        danger: { max: 750 }
       }
     },
     {
@@ -13479,7 +13482,7 @@ var linearRegulatorDropout = {
       thresholds: {
         good: { max: 30 },
         warning: { max: 60 },
-        danger: { min: 60 }
+        danger: { max: 60 }
       }
     },
     {
@@ -13498,7 +13501,7 @@ var linearRegulatorDropout = {
       thresholds: {
         good: { min: 85 },
         warning: { min: 70 },
-        danger: { max: 70 }
+        danger: { min: 70 }
       }
     },
     {
@@ -13510,7 +13513,7 @@ var linearRegulatorDropout = {
       thresholds: {
         good: { min: 500 },
         warning: { min: 100 },
-        danger: { max: 0 }
+        danger: { min: 0 }
       }
     }
   ],
@@ -15036,7 +15039,7 @@ var currentMirror = {
       thresholds: {
         good: { max: 1 },
         warning: { max: 5 },
-        danger: { min: 5 }
+        danger: { max: 5 }
       }
     },
     {
@@ -15161,7 +15164,7 @@ var thermalResistanceNetwork = {
       thresholds: {
         good: { max: 100 },
         warning: { max: 125 },
-        danger: { min: 125 }
+        danger: { max: 125 }
       }
     },
     {
@@ -15194,7 +15197,7 @@ var thermalResistanceNetwork = {
       thresholds: {
         good: { min: 50 },
         warning: { min: 20 },
-        danger: { max: 0 }
+        danger: { min: 0 }
       }
     }
   ],
@@ -15226,14 +15229,18 @@ function calculateBldcMotor(inputs) {
   const stallCurrent = safeVoltage / safeRmOhm;
   const kv_radV = safeKv * (2 * Math.PI / 60);
   const kt = 1 / Math.max(kv_radV, 1e-9);
+  const ktMnm = kt * 1e3;
   const stallTorque = kt * stallCurrent;
   const maxEfficiency = Math.pow(1 - Math.sqrt(safeNoLoad / Math.max(stallCurrent, 1e-3)), 2) * 100;
-  const inputPower = safeVoltage * (safeNoLoad + stallCurrent) / 2;
-  const d_mm = safePropDia * 25.4;
-  const thrust = 156e-7 * Math.pow(d_mm, 3.5) * Math.sqrt(Math.max(noLoadRpm / 1e3, 0));
+  const iMaxEff = Math.sqrt(safeNoLoad * stallCurrent);
+  const inputPower = safeVoltage * iMaxEff;
+  const loadedRpm = noLoadRpm * 0.75;
+  const thrust = 0.015 * Math.pow(safePropDia, 4) * Math.pow(Math.max(loadedRpm / 1e3, 0), 2);
   return {
     values: {
       noLoadRpm,
+      stallCurrent,
+      ktMnm,
       stallTorque,
       maxEfficiency,
       inputPower,
@@ -15315,14 +15322,32 @@ var bldcMotor = {
       label: "No-Load RPM",
       symbol: "N_0",
       unit: "RPM",
-      precision: 0
+      precision: 0,
+      tooltip: "RPM with no propeller attached (theoretical maximum speed)"
+    },
+    {
+      key: "stallCurrent",
+      label: "Stall Current",
+      symbol: "I_stall",
+      unit: "A",
+      precision: 1,
+      tooltip: "Theoretical locked-rotor current = V/Rm. Size your ESC well above typical operating current, not stall current."
+    },
+    {
+      key: "ktMnm",
+      label: "Torque Constant",
+      symbol: "K_t",
+      unit: "mNm/A",
+      precision: 3,
+      tooltip: "Torque produced per amp of current. K_t = 60/(2\u03C0 \xD7 K_v)"
     },
     {
       key: "stallTorque",
       label: "Stall Torque",
       symbol: "T_stall",
       unit: "Nm",
-      precision: 4
+      precision: 4,
+      tooltip: "Maximum theoretical torque at locked rotor = K_t \xD7 I_stall"
     },
     {
       key: "maxEfficiency",
@@ -15338,18 +15363,19 @@ var bldcMotor = {
     },
     {
       key: "inputPower",
-      label: "Input Power (at midpoint)",
+      label: "Input Power at Max Efficiency",
       symbol: "P_in",
       unit: "W",
-      precision: 2
+      precision: 1,
+      tooltip: "Power drawn at the operating point of maximum efficiency: P = V \xD7 \u221A(I\u2080 \xD7 I_stall)"
     },
     {
       key: "thrust",
       label: "Estimated Thrust",
       symbol: "F_thrust",
       unit: "g",
-      precision: 1,
-      tooltip: "Very rough thrust estimate for multirotor propellers"
+      precision: 0,
+      tooltip: "Empirical estimate assuming ~75% of no-load RPM under prop load. Actual thrust varies with prop pitch, air density, and throttle."
     }
   ],
   calculate: calculateBldcMotor,
@@ -15369,14 +15395,15 @@ var bldcMotor = {
 
 // src/lib/calculators/motor/servo-motor.ts
 function calculateServoMotor(inputs) {
-  const { voltage, current, speed, loadTorque, armRes } = inputs;
+  const { voltage, current, speed, armRes } = inputs;
   const inputPower = voltage * current;
   const backEmf = voltage - current * armRes;
   const speedRads = speed * Math.PI / 30;
-  const outputPower = loadTorque * speedRads;
-  const efficiency = inputPower > 0 ? outputPower / inputPower * 100 : 0;
-  const stallTorque = voltage / armRes * (loadTorque / (current || 1));
-  return { values: { inputPower, outputPower, efficiency, backEmf, stallTorque } };
+  const copperLoss = current * current * armRes;
+  const outputPower = Math.max(0, inputPower - copperLoss);
+  const efficiency = inputPower > 0 ? Math.min(outputPower / inputPower * 100, 100) : 0;
+  const mechanicalTorque = speedRads > 0 ? outputPower / speedRads : 0;
+  return { values: { inputPower, outputPower, efficiency, backEmf, stallTorque: mechanicalTorque } };
 }
 var servoMotor = {
   slug: "servo-motor",
@@ -15397,14 +15424,14 @@ var servoMotor = {
     { key: "outputPower", label: "Output Power", symbol: "P_out", unit: "W", precision: 3 },
     { key: "efficiency", label: "Efficiency", symbol: "\u03B7", unit: "%", precision: 1, thresholds: { good: { min: 60 }, warning: { min: 40 } } },
     { key: "backEmf", label: "Back-EMF", symbol: "V_emf", unit: "V", precision: 2 },
-    { key: "stallTorque", label: "Stall Torque (est.)", symbol: "T_s", unit: "N\xB7m", precision: 3 }
+    { key: "stallTorque", label: "Mechanical Torque", symbol: "T", unit: "N\xB7m", precision: 4, tooltip: "Torque at operating speed: T = P_out / \u03C9" }
   ],
   calculate: calculateServoMotor,
   formula: {
-    primary: "P_out = T \xD7 \u03C9,  \u03B7 = P_out/P_in \xD7 100%",
+    primary: "T = P_out / \u03C9,  \u03B7 = P_out/P_in \xD7 100%",
     variables: [
-      { symbol: "T", description: "Load torque", unit: "N\xB7m" },
-      { symbol: "\u03C9", description: "Angular speed", unit: "rad/s" }
+      { symbol: "T", description: "Mechanical torque", unit: "N\xB7m" },
+      { symbol: "\u03C9", description: "Angular speed (= 2\u03C0 \xD7 RPM / 60)", unit: "rad/s" }
     ]
   },
   visualization: { type: "none" },
@@ -15634,7 +15661,8 @@ var inductionMotorSlip = {
     { key: "effectiveSyncSpeed", label: "Synchronous Speed", symbol: "n_s", unit: "RPM", precision: 0 },
     { key: "slipPercent", label: "Slip", symbol: "s", unit: "%", precision: 2, thresholds: { good: { max: 5 }, warning: { max: 10 } } },
     { key: "slipRPM", label: "Speed Difference", symbol: "\u0394n", unit: "RPM", precision: 0 },
-    { key: "slipFrequency", label: "Rotor Frequency", symbol: "f_r", unit: "Hz", precision: 2 }
+    { key: "slipFrequency", label: "Rotor Frequency", symbol: "f_r", unit: "Hz", precision: 2 },
+    { key: "slip", label: "Slip (per-unit)", symbol: "s", unit: "", precision: 4 }
   ],
   calculate: calculateInductionMotorSlip,
   formula: {
@@ -15972,7 +16000,7 @@ function calculateMotorDriverPower(inputs) {
   const switchingLoss = switchingFreq * gateCharge * supplyVoltage * 1e-9;
   const totalLossPerFet = conductionLoss + switchingLoss;
   const totalLossBridge = totalLossPerFet * 4;
-  const efficiency = (1 - totalLossBridge / (supplyVoltage * motorCurrent)) * 100;
+  const efficiency = supplyVoltage * motorCurrent > 0 ? (1 - totalLossBridge / (supplyVoltage * motorCurrent)) * 100 : 0;
   return { values: { conductionLoss, switchingLoss, totalLossPerFet, totalLossBridge, efficiency } };
 }
 var motorDriverPower = {
@@ -16038,7 +16066,9 @@ var pidTuning = {
     { key: "kiPID", label: "Ki (PID)", symbol: "Ki", unit: "1/s", precision: 3 },
     { key: "kdPID", label: "Kd (PID)", symbol: "Kd", unit: "s", precision: 4 },
     { key: "kpPI", label: "Kp (PI only)", symbol: "Kp_PI", unit: "", precision: 3 },
-    { key: "tiPI", label: "Ti (PI only)", symbol: "Ti_PI", unit: "s", precision: 3 }
+    { key: "tiPI", label: "Ti (PI only)", symbol: "Ti_PI", unit: "s", precision: 3 },
+    { key: "tiPID", label: "Ti (PID)", symbol: "Ti", unit: "s", precision: 3 },
+    { key: "tdPID", label: "Td (PID)", symbol: "Td", unit: "s", precision: 4 }
   ],
   calculate: calculatePidTuning,
   formula: {
@@ -16410,8 +16440,8 @@ function calculateHallEffectSensor(inputs) {
   const { current, Bfield, thickness, carrierDensity } = inputs;
   const e = 1602e-22;
   const n = carrierDensity * 1e23;
-  if (n <= 0 || thickness <= 0) {
-    return { values: { hallVoltage: 0, hallCoefficient: 0, sensitivity: 0 }, errors: ["Carrier density and thickness must be positive"] };
+  if (n <= 0 || thickness <= 0 || Bfield <= 0) {
+    return { values: { hallVoltage: 0, hallCoefficient: 0, sensitivity: 0 }, errors: ["Carrier density, thickness, and magnetic field must be positive"] };
   }
   const RH = 1 / (n * e);
   const I_A = current * 1e-3;
@@ -16488,7 +16518,7 @@ var hallEffectSensor = {
       presets: [
         { label: "Copper (8.5\xD710\xB2\u2078/m\xB3 \u2192 use 8.5e5)", values: { carrierDensity: 85e4 } },
         { label: "InSb semiconductor (0.02)", values: { carrierDensity: 0.02 } },
-        { label: "Si typical (1.5\xD710\xB9\u2076/m\xB3 \u2192 0.00015)", values: { carrierDensity: 15e-5 } }
+        { label: "Si typical (1.5\xD710\xB9\u2076/m\xB3 \u2192 1.5e-7)", values: { carrierDensity: 15e-8 } }
       ]
     }
   ],
@@ -18877,7 +18907,7 @@ var junctionTemperature = {
       thresholds: {
         good: { max: 100 },
         warning: { min: 100, max: 120 },
-        danger: { min: 120 }
+        danger: { max: 120 }
       }
     },
     {
@@ -18906,7 +18936,7 @@ var junctionTemperature = {
       thresholds: {
         good: { min: 25 },
         warning: { min: 5, max: 25 },
-        danger: { max: 5 }
+        danger: { min: 5 }
       }
     }
   ],
@@ -19026,7 +19056,7 @@ var heatsinkSelection = {
       thresholds: {
         good: { min: 5 },
         warning: { min: 1, max: 5 },
-        danger: { max: 1 }
+        danger: { min: 1 }
       }
     },
     {
@@ -19399,7 +19429,7 @@ var pllLoopFilter = {
       thresholds: {
         good: { min: 40 },
         warning: { min: 25 },
-        danger: { max: 25 }
+        danger: { min: 25 }
       }
     },
     {
@@ -19955,7 +19985,7 @@ var powerDensity = {
       thresholds: {
         good: { max: 1e3 },
         warning: { min: 1e3, max: 1e4 },
-        danger: { min: 1e4 }
+        danger: { max: 1e4 }
       }
     },
     {
@@ -20284,8 +20314,8 @@ var linkMargin = {
       tooltip: "Margin above receiver sensitivity. Positive = link will work. >10 dB recommended.",
       thresholds: {
         good: { min: 10 },
-        warning: { min: 3, max: 10 },
-        danger: { max: 3 }
+        warning: { min: 0, max: 10 },
+        danger: { min: 0 }
       }
     },
     {
@@ -20475,7 +20505,7 @@ var mixerSpurCalculator = {
       thresholds: {
         good: { max: 1 },
         warning: { min: 1, max: 4 },
-        danger: { min: 4 }
+        danger: { max: 4 }
       }
     }
   ],
@@ -21114,7 +21144,7 @@ var voltageRegulatorDropout = {
       thresholds: {
         good: { min: 80 },
         warning: { min: 60, max: 80 },
-        danger: { max: 60 }
+        danger: { min: 60 }
       }
     }
   ],
@@ -21646,7 +21676,7 @@ var batteryInternalResistance = {
       thresholds: {
         good: { max: 50 },
         warning: { min: 50, max: 200 },
-        danger: { min: 200 }
+        danger: { max: 200 }
       }
     },
     {
@@ -25156,7 +25186,7 @@ server.registerTool(
   "list_simulation_tools",
   {
     title: "List Simulation Tools",
-    description: "List the 13 server-side RF simulation tools available via API key. These require RFTOOLS_API_KEY (set in env). Free tier: 5 runs/month. Pro: 100/month. API tier: 10 000/month.",
+    description: "List the 14 server-side RF simulation tools available via API key. These require RFTOOLS_API_KEY (set in env). Free tier: 5 runs/month. Pro: 100/month. API tier: 10 000/month.",
     inputSchema: import_zod.z.object({})
   },
   async () => {
